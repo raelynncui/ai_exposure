@@ -1,0 +1,43 @@
+{
+    "occupation": [
+        "pct_service",
+        "pct_sales_office",
+        "pct_natural_resources_construction"
+    ],
+    "industry": [
+        "pct_industry_agriculture",
+        "pct_industry_construction",
+        "pct_industry_manufacturing",
+        "pct_industry_wholesale",
+        "pct_industry_retail",
+        "pct_industry_transport_utilities",
+        "pct_industry_information",
+        "pct_industry_finance",
+        "pct_industry_professional",
+        "pct_industry_education_healthcare",
+        "pct_industry_arts_food",
+        "pct_industry_public_admin"
+    ],
+    "employment_type": [
+        "pct_private_forprofit",
+        "pct_self_employed_incorporated",
+        "pct_nonprofit",
+        "pct_government",
+        "pct_self_employed_unincorporated"
+    ],
+    "education_income": [
+        "pct_some_college_assoc",
+        "pct_bachelors_plus",
+        "per_capita_income"
+    ],
+    "commute": [
+        "pct_drove_alone",
+        "pct_public_transit",
+        "pct_worked_from_home",
+        "pct_long_commute"
+    ],
+    "digital_access": [
+        "pct_broadband",
+        "pct_has_computer"
+    ]
+}
