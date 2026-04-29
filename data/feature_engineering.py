@@ -11,7 +11,6 @@ INPUT  = Path("data/joined_cleaned.csv")
 OUTPUT = Path("data/features.csv")
 
 df = pl.read_csv(INPUT, infer_schema_length=2000, null_values=[""])
-print(f"Loaded: {df.shape[0]:,} rows × {df.shape[1]:,} cols")
 
 def share(num: pl.Expr, denom: pl.Expr) -> pl.Expr:
     return pl.when(denom > 0).then(num / denom).otherwise(None)
