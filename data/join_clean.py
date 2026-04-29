@@ -22,7 +22,7 @@ OUT_PATH = Path("data/joined_cleaned.csv")
 #                tracts such as water areas and institutional group quarters).
 #                Recommended for modelling.
 # Set to False → keep those rows.
-DROP_ZERO_AI_SCORE = False
+DROP_ZERO_AI_SCORE = True
 
 FIPS_COL      = "Geo__geoid_"
 AI_SCORE_COL  = "ORG_AIEI_004"   # AI Exposure Score (0-0.29) — the target
