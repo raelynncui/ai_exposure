@@ -13,7 +13,6 @@ from streamlit_folium import st_folium
 from map_utils import (
     build_choropleth_map,
     load_geojson,
-    COLORSCALES,
     FEATURE_LABELS,
 )
 
