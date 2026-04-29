@@ -218,6 +218,7 @@ feature_cols = [e.meta.output_name() for e in all_feature_exprs]
 features = df.select(["FIPS", "AI Exposure Score (0-0.29)"] + feature_cols)
 
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+features = features.drop_nulls()
 features.write_csv(OUTPUT)
 
 print(f"Saved: {features.shape[0]:,} rows × {features.shape[1]:,} cols "
@@ -225,13 +226,3 @@ print(f"Saved: {features.shape[0]:,} rows × {features.shape[1]:,} cols "
 print(f"\nFeatures ({len(feature_cols)}):")
 for c in feature_cols:
     print(f"  {c}")
-
-null_counts = (
-    features.null_count()
-    .transpose(include_header=True, header_name="col", column_names=["nulls"])
-    .filter(pl.col("nulls") > 0)
-)
-if null_counts.shape[0]:
-    print(f"\nNull counts:\n{null_counts}")
-else:
-    print("\nNo nulls in any feature column.")
