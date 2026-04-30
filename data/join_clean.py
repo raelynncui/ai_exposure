@@ -12,16 +12,13 @@ import sys
 from pathlib import Path
 
 import polars as pl
+import duckdb
 
 
 AI_PATH  = Path("data/ai.csv")
 ACS_PATH = Path("data/acs.csv")
 OUT_PATH = Path("data/joined_cleaned.csv")
 
-# Set to True  → drop rows where AI Exposure Score = 0 (unpopulated / special-use
-#                tracts such as water areas and institutional group quarters).
-#                Recommended for modelling.
-# Set to False → keep those rows.
 DROP_ZERO_AI_SCORE = True
 
 FIPS_COL      = "Geo__geoid_"
@@ -34,22 +31,13 @@ AI_DROP_COLS  = [                 # the four other AI cols we don't need
 ]
 OCC_TOTAL_COL = "ORG_C24010001"  # C24010 total civilian employed — occ-share denominator
 
-# Census uses these integers when an estimate is suppressed or not applicable.
+# Census uses these integers when an estimate is suppressed or not applicable
 CENSUS_SENTINELS = [-666666666, -888888888, -999999999, 666666666, 888888888]
 
 
 def build_rename_map(ai_path: Path, acs_path: Path) -> dict[str, str]:
-    """
-    Read the two header rows from both files and return a
-    {variable_code: human_label} mapping.
+    # Read the two header rows from both files and return a {variable_code: human_label} mapping.
 
-    Both files share the same two-row header convention:
-      row 0  →  human-readable labels
-      row 1  →  machine-readable variable codes
-
-    Duplicate human labels (e.g. "Total" appears as the grand-total row in
-    every ACS table) get ' ({code})' appended so every column name stays unique.
-    """
     rename: dict[str, str] = {}
     seen_labels: set[str]  = set()
 
@@ -63,7 +51,7 @@ def build_rename_map(ai_path: Path, acs_path: Path) -> dict[str, str]:
             if code in rename:          # shared geo cols already mapped from ai file
                 continue
             label = label.strip()
-            if label in seen_labels:    # duplicate label → append code to distinguish
+            if label in seen_labels:    # duplicate label, append code to distinguish
                 label = f"{label} ({code})"
             seen_labels.add(label)
             rename[code] = label
@@ -105,32 +93,36 @@ def main() -> None:
     ai  = load_csv(AI_PATH)
     acs = load_csv(ACS_PATH)
 
-    # Inner join — only keep tracts present in both files.
-    # Shared geo cols (GeoLevel, NAME, Qualified Area Name) get a '_right' suffix
-    # on the ACS copy; drop those duplicates and keep the AI file's versions.
-    df = ai.join(acs, on=FIPS_COL, how="inner", suffix="_right")
-    df = df.drop([c for c in df.columns if c.endswith("_right")])
+    # Inner join
+    con = duckdb.connect()
+    con.register("ai", ai)
+    con.register("acs", acs)
 
-    # Drop the four AI target cols we don't need 
-    df = df.drop([c for c in AI_DROP_COLS if c in df.columns])
+    ai_keep = [c for c in ai.columns if c not in AI_DROP_COLS]
+    AI_GEO_COLS = {"Geo__geo_level_", "Geo_NAME", "Geo_qname"}  # adjust to actual ACS col names
+    acs_exclude = {FIPS_COL} | AI_GEO_COLS
+    select_cols = ", ".join(f'ai."{c}"' for c in ai_keep) + \
+            ", " + ", ".join(f'acs."{c}"' for c in acs.columns if c not in acs_exclude)
+    df = con.execute(f"""
+        SELECT {select_cols}
+        FROM ai
+        INNER JOIN acs USING ("{FIPS_COL}")
+    """).pl()
+    
 
     # Step 2: Clean 
-
-    # Cast AI score to float
-    df = df.with_columns(pl.col(AI_SCORE_COL).cast(pl.Float64, strict=False))
-
-    # Optionally drop rows where AI Exposure Score = 0
-    if DROP_ZERO_AI_SCORE:
-        before = df.shape[0]
-        df = df.filter(pl.col(AI_SCORE_COL).is_not_null() & (pl.col(AI_SCORE_COL) > 0))
-
-    # Replace Census sentinel values (suppressed / N/A estimates) with null
     df = replace_sentinels(df)
 
-    # Drop tracts where the total civilian employed population is zero or null
-    df = df.with_columns(pl.col(OCC_TOTAL_COL).cast(pl.Float64, strict=False))
-    before = df.shape[0]
-    df = df.filter(pl.col(OCC_TOTAL_COL).is_not_null() & (pl.col(OCC_TOTAL_COL) > 0))
+    con.register("df", df)
+    zero_ai_filter = f'AND CAST("{AI_SCORE_COL}" AS DOUBLE) > 0' if DROP_ZERO_AI_SCORE else ""
+    df = con.execute(f"""
+        SELECT *
+        FROM df
+        WHERE CAST("{AI_SCORE_COL}" AS DOUBLE) IS NOT NULL
+        {zero_ai_filter}
+        AND CAST("{OCC_TOTAL_COL}" AS DOUBLE) IS NOT NULL
+        AND CAST("{OCC_TOTAL_COL}" AS DOUBLE) > 0
+    """).pl()
 
     df = df.rename({c: rename_map[c] for c in df.columns if c in rename_map})
 
