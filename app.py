@@ -213,40 +213,6 @@ with tab_analysis:
     else:
         st.info("Select at least two features to show the correlation heatmap.")
 
-    # All feature distributions
-    st.markdown("### Feature Distribution Grid")
-
-    show_grid = st.checkbox("Show distribution grid for all numeric features", value=False)
-
-    if show_grid:
-        cols_to_plot = numeric_cols[:30]
-
-        n_cols = 3
-        n_rows = int(np.ceil(len(cols_to_plot) / n_cols))
-
-        fig, axes = plt.subplots(
-            n_rows,
-            n_cols,
-            figsize=(14, 3.5 * n_rows),
-        )
-
-        axes = np.array(axes).reshape(-1)
-
-        for i, col in enumerate(cols_to_plot):
-            ax = axes[i]
-            data = df[col].dropna()
-            ax.hist(data, bins=50, edgecolor="white", linewidth=0.3)
-            ax.axvline(data.median(), linestyle="--", linewidth=1)
-            ax.set_title(col, fontsize=9)
-            ax.set_ylabel("Count")
-
-        for j in range(len(cols_to_plot), len(axes)):
-            axes[j].set_visible(False)
-
-        plt.suptitle("Distribution of Numeric Features", fontsize=14, y=1.01)
-        plt.tight_layout()
-        st.pyplot(fig)
-
 
 # Model Results
 
