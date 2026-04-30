@@ -220,9 +220,3 @@ features = df.select(["FIPS", "AI Exposure Score (0-0.29)"] + feature_cols)
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 features = features.drop_nulls()
 features.write_csv(OUTPUT)
-
-print(f"Saved: {features.shape[0]:,} rows × {features.shape[1]:,} cols "
-      f"({len(feature_cols)} features + FIPS + target) → {OUTPUT}")
-print(f"\nFeatures ({len(feature_cols)}):")
-for c in feature_cols:
-    print(f"  {c}")
